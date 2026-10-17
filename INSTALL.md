@@ -58,6 +58,19 @@ Se preferir uma instalação exclusiva de um projeto de teste, substitua `$targe
 - O `UPDATE.md` refere-se a `import-skills.ps1` e `gen-catalog.ps1`, **não encontrados na raiz do repositório durante a verificação inicial**; localizar ou adicionar scripts auditados antes de executar o procedimento de atualização.
 - Testar reconhecimento e execução real em Kilo Code local. **Ainda não homologado**.
 
+## Campo invocation_name no CATALOG.json
+
+Cada entrada do `CATALOG.json` inclui o campo `invocation_name`, extraído do frontmatter `name` do respectivo `SKILL.md` na origem. Esse campo indica o nome pelo qual a skill deve ser invocada no Kilo Code e pode divergir do nome do diretório de instalação (`skill`).
+
+Exemplo de divergência documentada:
+
+| id | diretório (skill) | invocation_name (frontmatter) |
+|---|---|---|
+| `vercel-labs-agent-skills/react-best-practices` | `react-best-practices` | `vercel-react-best-practices` |
+| `trailofbits-skills/code-improver` | `code-improver` | `skill-improver` |
+
+Ao instalar, o diretório de destino usa o nome `skill` (a pasta). O Kilo Code deve ser acionado pelo `invocation_name`. Quando duas skills compartilham o mesmo `invocation_name` (ex.: `brand-guidelines` em `getsentry-skills` e `anthropics-skills`), o instalador usa o nome qualificado pela origem (ex.: `getsentry-skills-brand-guidelines`) para evitar sobreposição.
+
 ## Remoção
 
 Remova somente a pasta da skill que instalou (no exemplo, `~/.kilo/skills/brainstorming`). Não remova a pasta `skills` inteira se contiver outras skills.

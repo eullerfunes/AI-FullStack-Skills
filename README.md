@@ -35,7 +35,13 @@ See [SOURCES.md](SOURCES.md) for full provenance and licenses.
 
 ## Central catalog
 
-`CATALOG.json` lists every skill with `id`, `name`, `description`, `category`, `origin`, `path`, `author`, `version`, and `license`.
+`CATALOG.json` lists every skill with `id`, `name`, `description`, `category`, `origin`, `skill`, `invocation_name`, `path`, `author`, `version`, and `license`.
+
+- `id`: full identifier in the form `origin/skill`.
+- `name`: short name as declared in the catalog (usually matches `skill`).
+- `invocation_name`: name extracted from the frontmatter `name` of the skill's `SKILL.md`; this is the name used to invoke the skill in Kilo Code. It may differ from `skill` (the directory name).
+- `skill`: directory name used as the installation destination.
+- `path`: relative path to the skill's `SKILL.md` inside `skills/`.
 
 ## Install
 
