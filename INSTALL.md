@@ -1,39 +1,67 @@
-# Install — Kilo Code Agent Skills
+# Instalação de Agent Skills no Kilo Code
 
-This library installs agent skills into Kilo Code so they are available as `container.skills` in the Claude API Messages Agent Skills surface.
+> Biblioteca central: 191 skills catalogadas. **Não instale todas automaticamente.** Este documento descreve instalação seletiva e verificação.
 
-## Prerequisites
+## Antes de instalar
 
-- Kilo Code (CLI or extension) with Agent Skills support
-- Git
+- Confira a versão do Kilo Code instalada. As versões atuais documentam skills de projeto em `.kilo/skills/<nome>/SKILL.md` e globais em `~/.kilo/skills/<nome>/SKILL.md`.
+- Versões antigas podem usar `.kilocode/skills/`. Verifique qual estrutura sua extensão reconhece.
+- **Não execute** scripts ou comandos embutidos em skills desconhecidas sem revisão.
+- Faça backup e use um projeto de teste; não comece pelo BarberOS ou Tapeçaria Bugão.
 
-## One-time install
+Referência: https://kilo.ai/docs/customize/skills
 
-Clone this repository:
+## Obter a biblioteca
 
-```bash
+```powershell
 git clone https://github.com/eullerfunes/AI-FullStack-Skills.git
 cd AI-FullStack-Skills
 ```
 
-Then point Kilo Code at the `skills/` directory. The exact mechanism depends on your Kilo Code host:
+A biblioteca usa `skills/<categoria>/<origem>/<skill>/<diretorio-original>/SKILL.md` em alguns casos. **Não copie a pasta de categoria inteira diretamente para o diretório do Kilo.** Cada skill deve terminar em `<diretorio-de-skills>/<nome-da-skill>/SKILL.md`.
 
-- **Kilo Code CLI:** add the `skills/` folder to your project's skill path (see your host's `CLAUDE.md` / skill configuration).
-- **Managed worktree:** each `skills/<category>/<origin>/<skill>/SKILL.md` is a standalone skill directory; copy or symlink the ones you need into `~/.claude/skills/` (or your host's skills directory).
+## Teste de instalação seletiva (PowerShell)
 
-## Selective install
+Execute no diretório da biblioteca depois de revisar o arquivo de origem:
 
-You do not need all 191 skills. Pick by category or origin:
+```powershell
+$source = 'skills/agents/obra-superpowers/brainstorming/brainstorming'
+$targetRoot = Join-Path $HOME '.kilo/skills'
+$target = Join-Path $targetRoot 'brainstorming'
 
-```bash
-# Example: only security + qa skills
-cp -r skills/security skills/qa ~/.claude/skills/
+if (!(Test-Path (Join-Path $source 'SKILL.md'))) { throw 'SKILL.md não encontrado na origem' }
+if (Test-Path $target) { throw "Destino existente; nenhuma substituição efetuada: $target" }
+
+New-Item -ItemType Directory -Force -Path $targetRoot | Out-Null
+Copy-Item -Path $source -Destination $target -Recurse
+Test-Path (Join-Path $target 'SKILL.md')
 ```
 
-## Verify
+Este exemplo instala **apenas a skill brainstorming** globalmente, sem sobrescrever versões pré-existentes. A skill tem instruções próprias e deve ser revisada antes de uso.
 
-After install, confirm each skill directory contains a valid `SKILL.md` with frontmatter (`name`, `description`, `metadata.author`, `metadata.version`).
+Se preferir uma instalação exclusiva de um projeto de teste, substitua `$targetRoot` por `'<diretorio-do-projeto>/.kilo/skills'`.
 
-## Uninstall
+## Verificação no Kilo
 
-Remove the `skills/` directory (or the specific skill subdirectories you copied) from your Kilo Code skills path.
+1. Abra um projeto de teste e inicie uma sessão nova, ou use `/reload` quando disponível.
+2. Consulte as skills oferecidas pelo Kilo; na interface nova, elas aparecem também no menu `/`.
+3. Peça explicitamente para o Kilo mostrar/usar a skill `brainstorming` e confirme que ele localiza o SKILL.md instalado.
+4. Verifique se o nome no frontmatter é idêntico ao nome da pasta imediata.
+
+**Importante:** a presença no `CATALOG.json` não garante que a skill foi descoberta ou está compatível. Uma skill pode exigir ferramentas, permissões ou dependências adicionais.
+
+## Pendências da biblioteca (auditoria inicial)
+
+- Conferir o catálogo completo: há campos `author`, `version` e `license` nulos em alguns itens e caminhos com separador Windows.
+- Validar nomes, descrição e correspondência pasta/frontmatter, detectar duplicações e licenças específicas.
+- Padronizar o empacotamento de cada skill para instalação direta sem níveis extras de pastas.
+- O `UPDATE.md` refere-se a `import-skills.ps1` e `gen-catalog.ps1`, **não encontrados na raiz do repositório durante a verificação inicial**; localizar ou adicionar scripts auditados antes de executar o procedimento de atualização.
+- Testar reconhecimento e execução real em Kilo Code local. **Ainda não homologado**.
+
+## Remoção
+
+Remova somente a pasta da skill que instalou (no exemplo, `~/.kilo/skills/brainstorming`). Não remova a pasta `skills` inteira se contiver outras skills.
+
+## Atualizações
+
+Revise `UPDATE.md`, compare alterações com a fonte original e não sobrescreva instalações sem backup, teste e aprovação.
