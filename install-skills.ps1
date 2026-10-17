@@ -2,22 +2,30 @@ param(
   [Parameter(Mandatory=$true)][ValidateSet('install','update','uninstall','dry-run')][string]$Action,
   [string]$Profile,
   [string[]]$Skills,
-  [string]$CatalogPath = (Join-Path $PSScriptRoot 'CATALOG.json'),
-  [string]$ProfilesPath = (Join-Path $PSScriptRoot 'profiles\profiles.json'),
-  [string]$Target = 'C:\Users\PC\.kilo\skills',
-  [string]$Manifest = 'C:\Users\PC\.kilo\skills\.ai-fullstack-manifest.json',
+  [string]$CatalogPath,
+  [string]$ProfilesPath,
+  [string]$Target,
+  [string]$Manifest,
   [switch]$Force
 )
 $ErrorActionPreference='Stop'
+if (-not $CatalogPath) { $CatalogPath = Join-Path $PSScriptRoot 'CATALOG.json' }
+if (-not $ProfilesPath) { $ProfilesPath = Join-Path $PSScriptRoot 'profiles\profiles.json' }
+if (-not $Target) { $Target = Join-Path $HOME '.kilo\skills' }
+if (-not $Manifest) { $Manifest = Join-Path $Target '.ai-fullstack-manifest.json' }
+
+function Fail($msg) { Write-Error $msg; exit 1 }
+
 try {
   $catalog = Get-Content $CatalogPath -Raw | ConvertFrom-Json
   $map = @{}
   foreach ($s in $catalog.skills) { $map[$s.id]=$s }
+
   $ids = @()
   if ($Profile) {
     $profiles = Get-Content $ProfilesPath -Raw | ConvertFrom-Json
     $ids = @($profiles.$Profile)
-    if (-not $ids -or $ids.Count -eq 0) { throw "Profile not found: $Profile" }
+    if (-not $ids -or $ids.Count -eq 0) { Fail "Profile not found: $Profile" }
   }
   if ($Skills) { $ids = @($ids) + @($Skills) }
   $ids = $ids | Sort-Object -Unique
@@ -44,9 +52,30 @@ try {
 
   if (-not (Test-Path $Target)) { New-Item -ItemType Directory -Path $Target -Force | Out-Null }
 
+  if ($Action -eq 'uninstall') {
+    foreach ($id in $ids) {
+      $s = $map[$id]
+      $destName = if ($s) { $s.skill } else { $id }
+      if (-not $manifestData.ContainsKey($destName)) {
+        $alt = if ($s) { "$($s.origin)-$($s.skill)" } else { $null }
+        if ($alt -and $manifestData.ContainsKey($alt)) { $destName = $alt }
+      }
+      $dest = Join-Path $Target $destName
+      if (Test-Path $dest) {
+        if (-not $Force -and -not $manifestData.ContainsKey($destName)) { Fail "Not tracked: $destName" }
+        Remove-Item -Recurse -Force $dest
+        $manifestData.Remove($destName) | Out-Null
+        Write-Host "REMOVED $destName"
+      }
+    }
+    $manifestData | ConvertTo-Json -Depth 5 | Set-Content $Manifest
+    Write-Host "DONE"
+    exit 0
+  }
+
   foreach ($id in $ids) {
     $s = $map[$id]
-    if (-not $s) { throw "Unknown skill: $id" }
+    if (-not $s) { Fail "Unknown skill: $id" }
     $src = Resolve-SourcePath $s
     Test-SkillMd $src
     $destName = $s.skill
@@ -63,7 +92,7 @@ try {
     $conflict = $exists -and -not $manifestData.ContainsKey($destName)
     Write-Host ("[{0}] {1} -> {2} {3}{4}" -f $Action,$id,$dest,$(if($exists){'EXISTS'}else{'NEW'}),$(if($conflict){' CONFLICT'}else{''}))
     if ($Action -eq 'dry-run') { continue }
-    if ($conflict -and -not $Force) { throw "Conflict: $destName" }
+    if ($conflict -and -not $Force) { Fail "Conflict: $destName" }
     if ($exists -and -not $Force -and $Action -ne 'update') { Write-Host "  SKIP (exists)"; continue }
 
     $backup = $null
@@ -87,28 +116,11 @@ try {
     Write-Host "  INSTALLED"
   }
 
-  if ($Action -eq 'uninstall') {
-    foreach ($id in $ids) {
-      $s = $map[$id]
-      $destName = if ($s) { $s.skill } else { $id }
-      if (-not $manifestData.ContainsKey($destName)) {
-        $alt = if ($s) { "$($s.origin)-$($s.skill)" } else { $null }
-        if ($alt -and $manifestData.ContainsKey($alt)) { $destName = $alt }
-      }
-      $dest = Join-Path $Target $destName
-      if (Test-Path $dest) {
-        if (-not $Force -and -not $manifestData.ContainsKey($destName)) { throw "Not tracked: $destName" }
-        Remove-Item -Recurse -Force $dest
-        $manifestData.Remove($destName) | Out-Null
-        Write-Host "REMOVED $destName"
-      }
-    }
-  }
-
   if ($Action -ne 'dry-run') {
     $manifestData | ConvertTo-Json -Depth 5 | Set-Content $Manifest
   }
   Write-Host "DONE"
+  exit 0
 } catch {
   Write-Error $_
   exit 1
