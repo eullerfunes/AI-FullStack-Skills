@@ -2,13 +2,15 @@ param(
   [Parameter(Mandatory=$true)][ValidateSet('install','update','uninstall','dry-run')][string]$Action,
   [string]$Profile,
   [string[]]$Skills,
-  [string]$CatalogPath = (Join-Path $PSScriptRoot 'CATALOG.json'),
-  [string]$ProfilesPath = (Join-Path $PSScriptRoot 'profiles\profiles.json'),
+  [string]$CatalogPath = '',
+  [string]$ProfilesPath = '',
   [string]$Target = 'C:\Users\PC\.kilo\skills',
   [string]$Manifest = 'C:\Users\PC\.kilo\skills\.ai-fullstack-manifest.json',
   [switch]$Force
 )
 $ErrorActionPreference='Stop'
+if ([string]::IsNullOrWhiteSpace($CatalogPath)) { $CatalogPath = Join-Path $PSScriptRoot 'CATALOG.json' }
+if ([string]::IsNullOrWhiteSpace($ProfilesPath)) { $ProfilesPath = Join-Path $PSScriptRoot 'profiles\profiles.json' }
 $catalog = Get-Content $CatalogPath -Raw | ConvertFrom-Json
 $map = @{}
 foreach ($s in $catalog.skills) { $map[$s.id]=$s }
